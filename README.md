@@ -5,4 +5,5 @@ Supported Operating Systems:
 Windows & Linux (Not tested on MacOS)
 
 [!] Install PyQt5 - 'pip install PyQt5' (and if not Python 3.9.1)
+
 [!] If receiving, change the client's default IP to the Server's IP Address
