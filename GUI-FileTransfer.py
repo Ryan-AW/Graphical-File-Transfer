@@ -64,6 +64,9 @@ class MainWindow(QDialog):
             self.FileButton.setText(selectedFile)
 
     def SendFile(self):
+        global PORT
+        PORT = int(self.Port_Box.text())
+
         self.OutputBox.setText(None)
 
         if (selectedFile == None or len(selectedFile) == 0):
@@ -79,7 +82,9 @@ class MainWindow(QDialog):
             self.RestrictWidgets(False)
 
     def ReceiveFile(self):
-        global SERVER; SERVER = self.IP_Box.text()
+        global SERVER, PORT
+        SERVER = self.IP_Box.text()
+        PORT = int(self.Port_Box.text())
 
         self.OutputBox.setText(None)
         self.OutputBox.append("Attempting to Connect to Server...")
