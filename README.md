@@ -7,4 +7,4 @@ Windows & Linux (Not tested on MacOS)
 [!] Required Library:
 PyQt5 - 'pip install PyQt5' (python3.9)
 
-![](images/icon.png)
+![](images/gui.png)
