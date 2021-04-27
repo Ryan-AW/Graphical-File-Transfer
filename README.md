@@ -1,5 +1,5 @@
 # Graphical-File-Transfer
-A Graphical File Transferring Program written in Python 3.9 utilizing the PyQt5 library.
+A Graphical File Transferring Program that works over networks written in Python 3.9 utilizing the PyQt5 library.
 
 Supported Operating Systems:
 Windows & Linux (Not tested on MacOS)
