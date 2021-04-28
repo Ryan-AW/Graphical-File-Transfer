@@ -34,6 +34,7 @@ class MainWindow(QDialog):
         self.Port = QLabel("Port:", self).setObjectName("Port_Label")
         self.Port_Box = QLineEdit(self); self.Port_Box.setObjectName("Port_Box")
         self.Port_Box.setMaxLength(5); self.Port_Box.setText(str(PORT))
+        self.onlyInt = QIntValidator(); self.Port_Box.setValidator(self.onlyInt)
 
         self.IP_Address = QLabel("Server IP:", self).setObjectName("IP_Label")
         self.IP_Box = QLineEdit(self); self.IP_Box.setObjectName("IP_Box")
@@ -60,8 +61,7 @@ class MainWindow(QDialog):
         options |= QFileDialog.DontUseNativeDialog
         selectedFile, _ = QFileDialog.getSaveFileName(self, "File Explorer", "", "All Files (*);;Text Files (*.txt)")
         if (selectedFile):
-            selectedFile = selectedFile.split("/")[-1]
-            self.FileButton.setText(selectedFile)
+            self.FileButton.setText(selectedFile.split("/")[-1])
 
     def SendFile(self):
         global PORT
@@ -72,7 +72,7 @@ class MainWindow(QDialog):
         if (selectedFile == None or len(selectedFile) == 0):
             self.OutputBox.append("No File Selected")
         else:
-            self.OutputBox.append(f"File: <span style=color:'darkred'>{selectedFile}</span>")
+            self.OutputBox.append(f"File: <span style=color:'darkred'>{selectedFile.split('/')[-1]}</span>")
             self.OutputBox.append("Attempting to Connect to Client...")
 
             server = ServerThread(window)
@@ -84,7 +84,18 @@ class MainWindow(QDialog):
     def ReceiveFile(self):
         global SERVER, PORT
         SERVER = self.IP_Box.text()
-        PORT = int(self.Port_Box.text())
+        PORT = self.Port_Box.text()
+
+        try:
+            if (int(PORT) <= 0 or int(PORT) > 65535):
+                self.OutputBox.append("Port Requirement: (1 - 65535)")
+                return
+            
+            else: PORT = int(PORT)
+
+        except ValueError:
+            self.OutputBox.append(f"Invalid Port : ({PORT})")
+            return
 
         self.OutputBox.setText(None)
         self.OutputBox.append("Attempting to Connect to Server...")
@@ -108,26 +119,35 @@ class ServerThread(threading.Thread):
         threading.Thread.__init__(self)
         self.window = window
 
+    def send(self, conn, data):
+        if not (isinstance(data, bytes)):
+            conn.send(bytes(data, "utf-8"))
+        else:
+            conn.send(data)
+
+        time.sleep(0.3)
+
     def run(self):
         fileSize = str(os.path.getsize(selectedFile))
-
         objSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
         objSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         objSocket.bind(("0.0.0.0", PORT))
         objSocket.listen(socket.SOMAXCONN)
+
         while (True):
             try:
                 conn, address = objSocket.accept()
-                
-                conn.send(bytes(selectedFile, "utf-8")); time.sleep(0.3)
-                conn.send(bytes(fileSize, "utf-8")); time.sleep(0.3)
+
+                self.send(conn, selectedFile.split("/")[-1])
+                self.send(conn, fileSize)
 
                 with open(selectedFile, "rb") as LocalFile:
-                    conn.send(LocalFile.read())
+                    self.send(conn, LocalFile.read())
 
-                self.window.OutputBox.append(f"\nFile Sent: {selectedFile}\nTotal Size Sent: {fileSize} Bytes")
+                self.window.OutputBox.append(f"\nConnected: {address[0]}\nFile Sent: {selectedFile.split('/')[-1]}\nTotal Size Sent: {fileSize} Bytes")
 
-            except socket.error:
+            except socket.error as e:
                 self.window.Message(f"\nError Occured Sending File to Remote Machine ~ ({e})")
 
             finally:
@@ -140,24 +160,24 @@ class ClientThread(threading.Thread):
         self.window = window
 
     def run(self):
-        data = b""
-
+        objSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         while (True):
             try:
-                objSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 objSocket.connect((SERVER, PORT))
             except:
                 continue
             else:
                 break
-        
+
+        data = b""
         fileName = str(objSocket.recv(BUFFER), "utf-8")
         fileSize = int(objSocket.recv(BUFFER))
-        with open(fileName, "wb") as RemoteFile:
-             while (len(data) < fileSize):
-                 data += objSocket.recv(fileSize)
 
-             RemoteFile.write(data)
+        with open(fileName, "wb") as RemoteFile:
+            while (len(data) < fileSize):
+                data += objSocket.recv(fileSize)
+
+            RemoteFile.write(data)
 
         self.window.OutputBox.append(f"\nFile Received: {fileName}\nTotal Size Received: {fileSize} Bytes")
         self.window.RestrictWidgets(True)
